@@ -144,12 +144,39 @@ export default function App() {
             <Ionicons name="add" size={30} color="#fff" />
           </TouchableOpacity>
 
-          {/* totals bar */}
-          <View style={styles.totals}>
-            <Text style={styles.totalTxt}>{tot.kcal.toFixed(0)} kcal</Text>
-            <Text style={styles.totalTxt}>P {tot.protein.toFixed(1)}</Text>
-            <Text style={styles.totalTxt}>F {tot.fat.toFixed(1)}</Text>
-            <Text style={styles.totalTxt}>C {tot.carbs.toFixed(1)}</Text>
+          {/* --- DAILY TOTALS BAR ------------------------------------ */}
+          <View style={styles.totalsBar}>
+            <Text style={styles.totalsTitle}>Daily Totals</Text>
+
+            <View style={styles.totalsRow}>
+              <View style={styles.totalsBox}>
+                <Text style={[styles.totalsVal, styles.proteinClr]}>
+                  {tot.protein.toFixed(1)}g
+                </Text>
+                <Text style={styles.totalsLbl}>Protein</Text>
+              </View>
+
+              <View style={styles.totalsBox}>
+                <Text style={[styles.totalsVal, styles.fatClr]}>
+                  {tot.fat.toFixed(1)}g
+                </Text>
+                <Text style={styles.totalsLbl}>Fat</Text>
+              </View>
+
+              <View style={styles.totalsBox}>
+                <Text style={[styles.totalsVal, styles.carbsClr]}>
+                  {tot.carbs.toFixed(1)}g
+                </Text>
+                <Text style={styles.totalsLbl}>Carbs</Text>
+              </View>
+
+              <View style={styles.totalsBox}>
+                <Text style={styles.totalsVal}>
+                  {tot.kcal.toFixed(0)}
+                </Text>
+                <Text style={styles.totalsLbl}>kcal</Text>
+              </View>
+            </View>
           </View>
 
           {/* calendar native modal */}
@@ -203,11 +230,11 @@ const styles = StyleSheet.create({
 
   addBtn: {
     position: 'absolute',
-    right: 24,
-    bottom: 96,
+    right: 16,
+    bottom: 126,
     backgroundColor: '#1e90ff',
-    width: 56,
-    height: 56,
+    width: 72,
+    height: 72,
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
@@ -223,6 +250,39 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   totalTxt: { fontWeight: '600' },
+
+  /* === DAILY TOTALS === */
+  totalsBar: {
+    backgroundColor: '#fff',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: '#d0d7de',
+    paddingBottom: 12,
+    paddingTop: 10,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: -2 },
+    shadowRadius: 6,
+    elevation: 0,
+  },
+  totalsTitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#475569',
+    marginBottom: 6,
+  },
+  totalsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  totalsBox: { alignItems: 'center', minWidth: 64 },
+  totalsVal: { fontSize: 17, fontWeight: '600', color: '#0f172a' },
+  totalsLbl: { fontSize: 11, color: '#64748b', marginTop: 2 },
+
+  /* kolorystyka makro-składników */
+  proteinClr: { color: '#0ea5e9' },  /* secondary */
+  fatClr:     { color: '#f59e0b' },  /* accent    */
+  carbsClr:   { color: '#10b981' },  /* primary   */
 
   deleteBox: {
     justifyContent: 'center',
