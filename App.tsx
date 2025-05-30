@@ -70,6 +70,12 @@ export default function App() {
 
   /* single row ------------------------------------------------------------- */
   const Row = ({ item }: { item: typeof meals[0] }) => {
+    const P = item.protein * item.multiplier;
+    const F = item.fat * item.multiplier;
+    const C = item.carbs * item.multiplier;
+    const kcal = P * 4 + F * 9 + C * 4;
+
+    /* usuwanie po przeciągnięciu w prawo */
     const handleDelete = async () => {
       await db.deleteMeal(item.id);
       refresh();
@@ -81,29 +87,38 @@ export default function App() {
       </View>
     );
 
-    const P = item.protein * item.multiplier;
-    const F = item.fat * item.multiplier;
-    const C = item.carbs * item.multiplier;
-    const kcal = P * 4 + F * 9 + C * 4;
-
     return (
-    <Swipeable
-      renderLeftActions={renderLeft}  
-      onSwipeableOpen={() => handleDelete()}
-      overshootLeft={false}
-    >
-      <Pressable style={styles.card} onPress={() => promptMul(item.id, item.multiplier)}>
-        <View style={styles.cardLeft}>
-          <Text style={styles.mult}>{item.multiplier.toFixed(1)}×</Text>
-          <Text style={styles.name}>{item.name}</Text>
-        </View>
-        <View style={styles.macros}>
-          <Text style={styles.kcal}>{kcal.toFixed(0)} kcal</Text>
-          <Text style={styles.macro}>{P.toFixed(1)} P</Text>
-          <Text style={styles.macro}>{F.toFixed(1)} F</Text>
-          <Text style={styles.macro}>{C.toFixed(1)} C</Text>
-        </View>
-      </Pressable>
+      <Swipeable
+        renderLeftActions={renderLeft}
+        onSwipeableOpen={handleDelete}
+        overshootLeft={false}
+      >
+        <Pressable style={styles.card} onPress={() => promptMul(item.id, item.multiplier)}>
+          {/* górna linia: multiplier + nazwa + kcal */}
+          <View style={styles.rowTop}>
+            <View style={styles.rowLeft}>
+              <Text style={styles.mult}>{item.multiplier.toFixed(1)}x</Text>
+              <Text style={styles.rowName}>{item.name}</Text>
+            </View>
+            <Text style={styles.kcal}>{kcal.toFixed(0)} kcal</Text>
+          </View>
+
+          {/* dolna linia: makro-składniki */}
+          <View style={styles.rowBottom}>
+            <Text style={styles.macroText}>
+              <Text style={[styles.macroVal, styles.proteinClr]}>{P.toFixed(1)}g </Text>protein
+            </Text>
+            <Text style={styles.macroText}>
+              <Text style={[styles.macroVal, styles.fatClr]}>{F.toFixed(1)}g </Text>fat
+            </Text>
+            <Text style={styles.macroText}>
+              <Text style={[styles.macroVal, styles.carbsClr]}>{C.toFixed(1)}g </Text>carbs
+            </Text>
+          </View>
+
+          {/* ikonka „grip” po prawej */}
+          <Ionicons name="ellipsis-vertical" size={20} color="#94a3b8" style={styles.grip} />
+        </Pressable>
       </Swipeable>
     );
   };
@@ -209,8 +224,8 @@ const styles = StyleSheet.create({
   },
   headerTxt: { fontSize: 18, fontWeight: '600', color: '#1e90ff' },
 
+  /* karta wiersza */
   card: {
-    flexDirection: 'row',
     backgroundColor: '#fff',
     marginHorizontal: 16,
     marginVertical: 6,
@@ -218,20 +233,29 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     elevation: 2,
   },
-  cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  mult: { fontSize: 13, color: '#777', marginRight: 4 },
-  name: { fontSize: 15 },
 
-  macros: { alignItems: 'flex-end' },
-  kcal: { fontSize: 13, marginBottom: 2, color: '#333' },
-  macro: { fontSize: 12, color: '#666' },
+  /* górna i dolna część wiersza */
+  rowTop:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' , paddingTop: '2', paddingBottom: '1'},
+  rowLeft:   { flexDirection: 'row', alignItems: 'center' },
+  rowBottom: { flexDirection: 'row', marginTop: 4 },
+
+  /* teksty */
+  mult:     { fontSize: 13, color: '#64748b', marginRight: 4, fontWeight: '500' },
+  rowName:  { fontSize: 15, color: '#0f172a', fontWeight: '500' },
+  kcal:     { fontSize: 13, color: '#0f172a', marginRight: 25, fontWeight: '600' },
+
+  macroText: { fontSize: 11, color: '#475569', marginRight: 16 },
+  macroVal:  { fontWeight: '600' },
+
+  /* ikona grip */
+  grip: { position: 'absolute', right: 12, top: 28 },
 
   empty: { textAlign: 'center', color: '#888' },
 
   addBtn: {
     position: 'absolute',
     right: 16,
-    bottom: 126,
+    bottom: 142,
     backgroundColor: '#1e90ff',
     width: 72,
     height: 72,
@@ -256,8 +280,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: '#d0d7de',
-    paddingBottom: 12,
-    paddingTop: 10,
+    paddingBottom: 14,
+    paddingTop: 16,
     paddingHorizontal: 16,
     shadowColor: '#000',
     shadowOpacity: 0.05,
@@ -269,7 +293,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: '#475569',
-    marginBottom: 6,
+    marginBottom: 12,
   },
   totalsRow: {
     flexDirection: 'row',
