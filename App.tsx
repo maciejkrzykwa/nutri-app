@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -69,11 +70,28 @@ export default function App() {
 
   /* single row ------------------------------------------------------------- */
   const Row = ({ item }: { item: typeof meals[0] }) => {
+    const handleDelete = async () => {
+      await db.deleteMeal(item.id);
+      refresh();
+    };
+
+    const renderLeft = () => (
+      <View style={styles.deleteBox}>
+        <Ionicons name="trash-outline" size={26} color="#fff" />
+      </View>
+    );
+
     const P = item.protein * item.multiplier;
     const F = item.fat * item.multiplier;
     const C = item.carbs * item.multiplier;
     const kcal = P * 4 + F * 9 + C * 4;
+
     return (
+    <Swipeable
+      renderLeftActions={renderLeft}  
+      onSwipeableOpen={() => handleDelete()}
+      overshootLeft={false}
+    >
       <Pressable style={styles.card} onPress={() => promptMul(item.id, item.multiplier)}>
         <View style={styles.cardLeft}>
           <Text style={styles.mult}>{item.multiplier.toFixed(1)}×</Text>
@@ -86,6 +104,7 @@ export default function App() {
           <Text style={styles.macro}>{C.toFixed(1)} C</Text>
         </View>
       </Pressable>
+      </Swipeable>
     );
   };
 
@@ -100,49 +119,51 @@ export default function App() {
 
   /* render ----------------------------------------------------------------- */
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.safe}>
-        <StatusBar style="dark" />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.safe}>
+          <StatusBar style="dark" />
 
-        {/* header */}
-        <TouchableOpacity style={styles.header} onPress={() => setShowCal(true)}>
-          <Ionicons name="calendar-outline" size={18} color="#1e90ff" />
-          <Text style={styles.headerTxt}> {iso(date)}</Text>
-        </TouchableOpacity>
+          {/* header */}
+          <TouchableOpacity style={styles.header} onPress={() => setShowCal(true)}>
+            <Ionicons name="calendar-outline" size={18} color="#1e90ff" />
+            <Text style={styles.headerTxt}> {iso(date)}</Text>
+          </TouchableOpacity>
 
-        {/* list */}
-        <FlatList
-          data={meals}
-          keyExtractor={(i) => i.id.toString()}
-          renderItem={Row}
-          contentContainerStyle={meals.length === 0 && { flex: 1, justifyContent: 'center' }}
-          ListEmptyComponent={<Text style={styles.empty}>Brak pozycji</Text>}
-        />
-
-        {/* floating + */}
-        <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
-          <Ionicons name="add" size={30} color="#fff" />
-        </TouchableOpacity>
-
-        {/* totals bar */}
-        <View style={styles.totals}>
-          <Text style={styles.totalTxt}>{tot.kcal.toFixed(0)} kcal</Text>
-          <Text style={styles.totalTxt}>P {tot.protein.toFixed(1)}</Text>
-          <Text style={styles.totalTxt}>F {tot.fat.toFixed(1)}</Text>
-          <Text style={styles.totalTxt}>C {tot.carbs.toFixed(1)}</Text>
-        </View>
-
-        {/* calendar native modal */}
-        {showCal && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display="calendar"
-            onChange={onChangeDate}
+          {/* list */}
+          <FlatList
+            data={meals}
+            keyExtractor={(i) => i.id.toString()}
+            renderItem={Row}
+            contentContainerStyle={meals.length === 0 && { flex: 1, justifyContent: 'center' }}
+            ListEmptyComponent={<Text style={styles.empty}>Brak pozycji</Text>}
           />
-        )}
-      </SafeAreaView>
-    </SafeAreaProvider>
+
+          {/* floating + */}
+          <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+            <Ionicons name="add" size={30} color="#fff" />
+          </TouchableOpacity>
+
+          {/* totals bar */}
+          <View style={styles.totals}>
+            <Text style={styles.totalTxt}>{tot.kcal.toFixed(0)} kcal</Text>
+            <Text style={styles.totalTxt}>P {tot.protein.toFixed(1)}</Text>
+            <Text style={styles.totalTxt}>F {tot.fat.toFixed(1)}</Text>
+            <Text style={styles.totalTxt}>C {tot.carbs.toFixed(1)}</Text>
+          </View>
+
+          {/* calendar native modal */}
+          {showCal && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display="calendar"
+              onChange={onChangeDate}
+            />
+          )}
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -202,4 +223,13 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   totalTxt: { fontWeight: '600' },
+
+  deleteBox: {
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    backgroundColor: '#ff3b30',
+    paddingHorizontal: 20,
+    marginVertical: 6,
+    borderRadius: 10,
+  },
 });
