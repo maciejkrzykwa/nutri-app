@@ -8,6 +8,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Animated,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
@@ -106,8 +107,20 @@ export default function App() {
           loadProductsView();
         };
 
-        /* ------------- pojedynczy wiersz listy -------------------------- */
-        const renderItemRow = ({ item }: { item: typeof products[0] }) => {
+        /* ----------- COMPONENT: pojedynczy wiersz produktu ----------- */
+        const ProductRow = ({
+          item,
+          onDelete,
+        }: {
+          item: typeof products[0];
+          onDelete: (id: number) => void;
+        }) => {
+          const opacity = React.useRef(new Animated.Value(1)).current;
+
+          const fadeOutAndDelete = () =>
+            Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true })
+              .start(() => onDelete(item.id));
+
           const renderLeft = () => (
             <View style={styles.deleteBox}>
               <Ionicons name="trash-outline" size={26} color="#fff" />
@@ -117,33 +130,29 @@ export default function App() {
           return (
             <Swipeable
               renderLeftActions={renderLeft}
-              onSwipeableOpen={() => handleDeleteProduct(item.id)}
+              onSwipeableOpen={fadeOutAndDelete}
               overshootLeft={false}
             >
-              <View style={styles.prodRow}>
-                <Text style={styles.prodName}>{item.name}</Text>
-                <Text style={styles.macroText}>
-                  <Text style={[styles.macroVal, styles.proteinClr]}>
-                    {item.protein.toFixed(1)}g{' '}
+              <Animated.View style={{ opacity }}>
+                <View style={styles.prodRow}>
+                  <Text style={styles.prodName}>{item.name}</Text>
+                  <Text style={styles.macroText}>
+                    <Text style={[styles.macroVal, styles.proteinClr]}>{item.protein.toFixed(1)}g </Text>
+                    protein
                   </Text>
-                  protein
-                </Text>
-                <Text style={styles.macroText}>
-                  <Text style={[styles.macroVal, styles.fatClr]}>
-                    {item.fat.toFixed(1)}g{' '}
+                  <Text style={styles.macroText}>
+                    <Text style={[styles.macroVal, styles.fatClr]}>{item.fat.toFixed(1)}g </Text>
+                    fat
                   </Text>
-                  fat
-                </Text>
-                <Text style={styles.macroText}>
-                  <Text style={[styles.macroVal, styles.carbsClr]}>
-                    {item.carbs.toFixed(1)}g{' '}
+                  <Text style={styles.macroText}>
+                    <Text style={[styles.macroVal, styles.carbsClr]}>{item.carbs.toFixed(1)}g </Text>
+                    carbs
                   </Text>
-                  carbs
-                </Text>
-                <Text style={styles.kcal}>
-                  {(item.protein * 4 + item.carbs * 4 + item.fat * 9).toFixed(0)} kcal
-                </Text>
-              </View>
+                  <Text style={styles.kcal}>
+                    {(item.protein * 4 + item.carbs * 4 + item.fat * 9).toFixed(0)} kcal
+                  </Text>
+                </View>
+              </Animated.View>
             </Swipeable>
           );
         };
@@ -153,7 +162,7 @@ export default function App() {
             <FlatList
               data={products}
               keyExtractor={(i) => i.id.toString()}
-              renderItem={renderItemRow}
+              renderItem={({item}) => (<ProductRow item={item} onDelete={handleDeleteProduct} />)}
               contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
               ListEmptyComponent={
                 <Text style={{ textAlign: 'center', marginTop: 32, color: '#64748b' }}>
@@ -216,57 +225,68 @@ export default function App() {
         );
       };
 
-  /* single row ------------------------------------------------------------- */
-  const Row = ({ item }: { item: typeof meals[0] }) => {
-    const P = item.protein * item.multiplier;
-    const F = item.fat * item.multiplier;
-    const C = item.carbs * item.multiplier;
-    const kcal = P * 4 + F * 9 + C * 4;
+ /* ----------- COMPONENT: pojedynczy wiersz posiłku ----------- */
+const MealRow = ({ item }: { item: typeof meals[0] }) => {
+  const opacity = React.useRef(new Animated.Value(1)).current;
+  const [shadowOff, setShadowOff] = useState(false);
 
-    /* usuwanie po przeciągnięciu w prawo */
-    const handleDelete = async () => {
-      await db.deleteMeal(item.id);
-      refresh();
-    };
+  const fadeOutAndDelete = () => {
+    setShadowOff(true);
+    Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true })
+      .start(async () => {
+        await db.deleteMeal(item.id);
+        refresh();
+      });
+  };
 
-    const renderLeft = () => (
-      <View style={styles.deleteBox}>
-        <Ionicons name="trash-outline" size={26} color="#fff" />
-      </View>
-    );
+  const P = item.protein * item.multiplier;
+  const F = item.fat * item.multiplier;
+  const C = item.carbs * item.multiplier;
+  const kcal = P * 4 + F * 9 + C * 4;
 
-    return (
-      <Swipeable
-        renderLeftActions={renderLeft}
-        onSwipeableOpen={handleDelete}
-        overshootLeft={false}
-      >
-        <Pressable style={styles.card} onPress={() => openMul(item.id, item.multiplier)}>
-          {/* górna linia: multiplier + nazwa + kcal */}
-          <View style={styles.rowTop}>
-            <View style={styles.rowLeft}>
-              <Text style={styles.mult}>{item.multiplier.toFixed(1)}x</Text>
-              <Text style={styles.rowName}>{item.name}</Text>
+  const renderLeft = () => (
+    <View style={styles.deleteBox}>
+      <Ionicons name="trash-outline" size={26} color="#fff" />
+    </View>
+  );
+
+  return (
+    <Swipeable
+      renderLeftActions={renderLeft}
+      onSwipeableOpen={fadeOutAndDelete}
+      overshootLeft={false}
+    >
+      <Animated.View style={{ opacity }}>
+        <Pressable style={[
+          styles.card,
+          shadowOff && { elevation: 0, shadowOpacity: 0 },
+        ]} onPress={() => openMul(item.id, item.multiplier)}>
+            {/* górna linia: multiplier + nazwa + kcal */}
+            <View style={styles.rowTop}>
+              <View style={styles.rowLeft}>
+                <Text style={styles.mult}>{item.multiplier.toFixed(1)}x</Text>
+                <Text style={styles.rowName}>{item.name}</Text>
+              </View>
+              <Text style={styles.kcal}>{kcal.toFixed(0)} kcal</Text>
             </View>
-            <Text style={styles.kcal}>{kcal.toFixed(0)} kcal</Text>
-          </View>
 
-          {/* dolna linia: makro-składniki */}
-          <View style={styles.rowBottom}>
-            <Text style={styles.macroText}>
-              <Text style={[styles.macroVal, styles.proteinClr]}>{P.toFixed(1)}g </Text>protein
-            </Text>
-            <Text style={styles.macroText}>
-              <Text style={[styles.macroVal, styles.fatClr]}>{F.toFixed(1)}g </Text>fat
-            </Text>
-            <Text style={styles.macroText}>
-              <Text style={[styles.macroVal, styles.carbsClr]}>{C.toFixed(1)}g </Text>carbs
-            </Text>
-          </View>
+            {/* dolna linia: makro-składniki */}
+            <View style={styles.rowBottom}>
+              <Text style={styles.macroText}>
+                <Text style={[styles.macroVal, styles.proteinClr]}>{P.toFixed(1)}g </Text>protein
+              </Text>
+              <Text style={styles.macroText}>
+                <Text style={[styles.macroVal, styles.fatClr]}>{F.toFixed(1)}g </Text>fat
+              </Text>
+              <Text style={styles.macroText}>
+                <Text style={[styles.macroVal, styles.carbsClr]}>{C.toFixed(1)}g </Text>carbs
+              </Text>
+            </View>
 
-          {/* ikonka „grip” po prawej */}
-          <Ionicons name="ellipsis-vertical" size={20} color="#94a3b8" style={styles.grip} />
-        </Pressable>
+            {/* ikonka „grip” po prawej */}
+            <Ionicons name="ellipsis-vertical" size={20} color="#94a3b8" style={styles.grip} />
+          </Pressable>
+        </Animated.View>
       </Swipeable>
     );
   };
@@ -339,7 +359,7 @@ export default function App() {
             ref={listRef}
             data={meals}
             keyExtractor={(i) => i.id.toString()}
-            renderItem={Row}
+            renderItem={({item}) => <MealRow item={item} />}
             onContentSizeChange={() => {
               if (needScroll) {
                 listRef.current?.scrollToEnd({ animated: true });
