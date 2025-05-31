@@ -13,9 +13,13 @@ import {
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
-import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as db from './src/db';
+/* imports – dodajemy Icons */
+import { Ionicons, Octicons, FontAwesome5 } from '@expo/vector-icons';
+
+/* enum tabów, na górze pliku */
+type Tab = 'daily' | 'products';
 
 /* utils */
 const iso = (d: Date) => d.toISOString().split('T')[0];
@@ -34,6 +38,8 @@ export default function App() {
     setMeals(await db.getMealsByDate(day));
     setTot((await db.getTotals(day)) ?? { protein: 0, fat: 0, carbs: 0, kcal: 0 });
   }, [date]);
+
+  const [tab, setTab] = useState<Tab>('daily');
 
   useEffect(() => {
     db.init().then(refresh).catch(console.warn);
@@ -67,6 +73,123 @@ export default function App() {
       'decimal-pad'
     );
   };
+
+      /* ------------------------------------------------------------------ */
+      /*                       PRODUCTS  –  drugi ekran                     */
+      /* ------------------------------------------------------------------ */
+      const ProductsScreen: React.FC = () => {
+        const [products, setProductsProductsView] = useState<
+          { id: number; name: string; protein: number; fat: number; carbs: number }[]
+        >([]);
+        const loadProductsView = useCallback(async () => setProductsProductsView(await db.getAllProducts()), []);
+        useEffect(() => { loadProductsView(); }, []);
+
+        /* -------- modal state -------- */
+        const [show, setShowProductsView] = useState(false);
+        const [name, setNameProductsView]       = useState('');
+        const [protein, setProteinProductsView] = useState('');
+        const [fat, setFatProductsView]         = useState('');
+        const [carbs, setCarbsProductsView]     = useState('');
+
+        const resetFormProductsView = () => { setNameProductsView(''); setProteinProductsView(''); setFatProductsView(''); setCarbsProductsView(''); };
+        const openProductsView  = () => { resetFormProductsView(); setShowProductsView(true); };
+        const closeProductsView = () => setShowProductsView(false);
+
+        const handleSaveProductsView = async () => {
+          const p = parseFloat(protein), f = parseFloat(fat), c = parseFloat(carbs);
+          if (!name.trim() || isNaN(p) || isNaN(f) || isNaN(c)) return;
+          await db.addProduct(name.trim(), p, f, c);
+          closeProductsView();
+          loadProductsView();
+        };
+
+        /* ------------- pojedynczy wiersz listy -------------------------- */
+        const renderItemRow = ({ item }: { item: typeof products[0] }) => (
+
+          <View style={styles.prodRow}>
+            <Text style={styles.prodName}>{item.name}</Text>
+
+            <Text style={styles.macroText}>
+              <Text style={[styles.macroVal, styles.proteinClr]}>{item.protein.toFixed(1)}g </Text>protein
+            </Text>
+            <Text style={styles.macroText}>
+              <Text style={[styles.macroVal, styles.fatClr]}>{item.fat.toFixed(1)}g </Text>fat
+            </Text>
+            <Text style={styles.macroText}>
+              <Text style={[styles.macroVal, styles.carbsClr]}>{item.carbs.toFixed(1)}g </Text>carbs
+            </Text>
+            <Text style={styles.kcal}>{(item.protein*4+item.carbs*4+item.fat*9).toFixed(0)} kcal</Text>
+          </View>
+
+        );
+
+        return (
+          <>
+            <FlatList
+              data={products}
+              keyExtractor={(i) => i.id.toString()}
+              renderItem={renderItemRow}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
+              ListEmptyComponent={
+                <Text style={{ textAlign: 'center', marginTop: 32, color: '#64748b' }}>
+                  No products yet
+                </Text>
+              }
+            />
+
+            {/* floating + */}
+            <TouchableOpacity style={styles.addBtn} onPress={openProductsView}>
+              <Ionicons name="add" size={30} color="#fff" />
+            </TouchableOpacity>
+
+            {/* ---------- MODAL ---------- */}
+            <Modal visible={show} transparent animationType="slide">
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalBox}>
+                  <Text style={styles.modalTitle}>New product</Text>
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Name"
+                    value={name}
+                    onChangeText={setNameProductsView}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Protein"
+                    keyboardType="decimal-pad"
+                    value={protein}
+                    onChangeText={setProteinProductsView}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Fat"
+                    keyboardType="decimal-pad"
+                    value={fat}
+                    onChangeText={setFatProductsView}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Carbs"
+                    keyboardType="decimal-pad"
+                    value={carbs}
+                    onChangeText={setCarbsProductsView}
+                  />
+
+                  <View style={styles.modalBtns}>
+                    <TouchableOpacity style={styles.btnCancel} onPress={closeProductsView}>
+                      <Text style={styles.btnTxt}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.btnSave} onPress={handleSaveProductsView}>
+                      <Text style={[styles.btnTxt, { color: '#fff' }]}>Save</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+          </>
+        );
+      };
 
   /* single row ------------------------------------------------------------- */
   const Row = ({ item }: { item: typeof meals[0] }) => {
@@ -139,11 +262,52 @@ export default function App() {
         <SafeAreaView style={styles.safe}>
           <StatusBar style="dark" />
 
-          {/* header */}
-          <TouchableOpacity style={styles.header} onPress={() => setShowCal(true)}>
-            <Ionicons name="calendar-outline" size={18} color="#1e90ff" />
-            <Text style={styles.headerTxt}> {iso(date)}</Text>
-          </TouchableOpacity>
+          {/* ---------- DATE PICKER BUTTON (Tylko gdy Daily) -------- */}
+          {tab === 'daily' ? (
+              <TouchableOpacity style={styles.dateBtn} onPress={() => setShowCal(true)}>  
+                <Text style={styles.dateTxt}><Ionicons name="calendar-outline" size={18} color="#fff" /> {iso(date)}</Text>
+              </TouchableOpacity>
+          ) : (
+              <TouchableOpacity style={styles.dateBtn}>  
+                
+              </TouchableOpacity>
+          )}
+
+          {/* ---------- TABS ----------------------------------------- */}
+          <View style={styles.tabsWrap}>
+            <Pressable
+              style={[styles.tabBtn, tab === 'daily' && styles.tabActive]}
+              onPress={() => setTab('daily')}
+            >
+              <FontAwesome5   
+                name="utensils"
+                size={16}
+                color={tab === 'daily' ? '#2563eb' : '#475569'}
+              />
+              <Text style={[styles.tabTxt, tab === 'daily' && styles.tabTxtActive]}>
+                {' '}Daily Tracking
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.tabBtn, tab === 'products' && styles.tabActive]}
+              onPress={() => setTab('products')}
+            >
+              <Ionicons name="server-outline" size={18} color={tab === 'products' ? '#2563eb' : '#475569'} />
+              <Text style={[styles.tabTxt, tab === 'products' && styles.tabTxtActive]}>
+                {' '}Products
+              </Text>
+            </Pressable>
+          </View>
+
+          
+
+
+
+          {/* -------- SWITCH SCREEN ---------------------------------- */}
+          {tab === 'daily' ? (
+
+          <>
 
           {/* list */}
           <FlatList
@@ -203,6 +367,14 @@ export default function App() {
               onChange={onChangeDate}
             />
           )}
+          </>
+        ) : (
+          
+          <ProductsScreen />
+
+        )}
+
+
         </SafeAreaView>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -315,5 +487,105 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginVertical: 6,
     borderRadius: 10,
+  },
+
+  /* przycisk z datą */
+  dateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: '#d1d5db',
+    backgroundColor: '#2563eb',
+    alignSelf: 'center',
+    width: '100%',
+    textAlign: 'center',
+    alignContent: 'center',
+    height: 70,
+  },
+  dateTxt: { fontSize: 20, color: '#fff', fontWeight: '500',
+    alignSelf: 'center',
+    width: '100%',
+    textAlign: 'center',
+    alignContent: 'center',
+   },
+
+  /* ---------- TABS ---------- */
+  tabsWrap: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: '#cbd5e1',
+    marginBottom: 12,
+  },
+
+  tabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+
+  /* kolor podkreślenia + jaśniejsze tło dla aktywnej karty */
+  tabActive: {
+    backgroundColor: '#eff6ff',
+    borderBottomWidth: 2,
+    borderColor: '#2563eb',
+  },
+
+  tabTxt: {
+    fontSize: 15,
+    color: '#475569',   // Slate-600
+    fontWeight: '500',
+  },
+
+  tabTxtActive: {
+    color: '#2563eb',   // Indigo-600
+  },
+
+
+  /* --- products row --- */
+  prodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: '#e2e8f0',
+  },
+  prodName:  { flex: 1, fontSize: 15, color: '#0f172a' },
+  prodMacro: { width: 50, textAlign: 'right', fontSize: 12, color: '#475569' },
+
+  /* --- modal --- */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBox: {
+    width: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '600', marginBottom: 12, color: '#0f172a' },
+  input: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 10,
+  },
+  modalBtns: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 6 },
+  btnCancel: { paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8 },
+  btnSave: {
+    marginLeft: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    backgroundColor: '#2563eb',
+    borderRadius: 8,
   },
 });
