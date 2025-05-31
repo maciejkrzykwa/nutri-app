@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -24,6 +23,7 @@ type Tab = 'daily' | 'products';
 /* utils */
 const iso = (d: Date) => d.toISOString().split('T')[0];
 
+
 /* ------------------------------------------------------------------- */
 export default function App() {
   const [date, setDate] = useState(new Date());
@@ -41,38 +41,36 @@ export default function App() {
 
   const [tab, setTab] = useState<Tab>('daily');
 
+  /* ---------- PRODUCT PICKER (Daily) ---------- */
+  const [showPicker, setShowPicker] = useState(false);
+  const [allProducts, setAllProducts] = useState<{ id:number; name:string; protein:number; fat:number; carbs:number }[]>([]);
+
+  const openPicker = async () => {
+    setAllProducts(await db.getAllProducts());
+    setShowPicker(true);
+  };
+  const closePicker = () => setShowPicker(false);
+
+  const [needScroll, setNeedScroll] = useState(false);
+  const listRef = useRef<FlatList<any>>(null);
+
+  /* ---------- EDIT MULTIPLIER MODAL ---------- */
+  const [showMul, setShowMul]         = useState(false);
+  const [selectedId, setSelectedId]   = useState<number | null>(null);
+  const [mulVal, setMulVal]           = useState('');
+  const openMul = (id:number, cur:number) => {
+    setSelectedId(id);
+    setMulVal(cur.toString());
+    setShowMul(true);
+  };
+  const closeMul = () => setShowMul(false);
+
   useEffect(() => {
     db.init().then(refresh).catch(console.warn);
   }, []);
 
-  /* add test product ------------------------------------------------------- */
-  const handleAdd = async () => {
-    await db.addMeal('100 g Rice', 3, 0.1, 27, iso(date));
-    refresh();
-  };
+  
 
-  /* multiplier edit -------------------------------------------------------- */
-  const promptMul = (id: number, cur: number) => {
-    Alert.prompt(
-      'Multiplier',
-      '0.0 – 10.0',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Save',
-          onPress: async (v) => {
-            const m = parseFloat(v ?? '1');
-            if (isNaN(m) || m < 0 || m > 10) return;
-            await db.updateMultiplier(id, m);
-            refresh();
-          },
-        },
-      ],
-      'plain-text',
-      cur.toString(),
-      'decimal-pad'
-    );
-  };
 
       /* ------------------------------------------------------------------ */
       /*                       PRODUCTS  –  drugi ekran                     */
@@ -103,25 +101,52 @@ export default function App() {
           loadProductsView();
         };
 
+        const handleDeleteProduct = async (id: number) => {
+          await db.deleteProduct(id);
+          loadProductsView();
+        };
+
         /* ------------- pojedynczy wiersz listy -------------------------- */
-        const renderItemRow = ({ item }: { item: typeof products[0] }) => (
+        const renderItemRow = ({ item }: { item: typeof products[0] }) => {
+          const renderLeft = () => (
+            <View style={styles.deleteBox}>
+              <Ionicons name="trash-outline" size={26} color="#fff" />
+            </View>
+          );
 
-          <View style={styles.prodRow}>
-            <Text style={styles.prodName}>{item.name}</Text>
-
-            <Text style={styles.macroText}>
-              <Text style={[styles.macroVal, styles.proteinClr]}>{item.protein.toFixed(1)}g </Text>protein
-            </Text>
-            <Text style={styles.macroText}>
-              <Text style={[styles.macroVal, styles.fatClr]}>{item.fat.toFixed(1)}g </Text>fat
-            </Text>
-            <Text style={styles.macroText}>
-              <Text style={[styles.macroVal, styles.carbsClr]}>{item.carbs.toFixed(1)}g </Text>carbs
-            </Text>
-            <Text style={styles.kcal}>{(item.protein*4+item.carbs*4+item.fat*9).toFixed(0)} kcal</Text>
-          </View>
-
-        );
+          return (
+            <Swipeable
+              renderLeftActions={renderLeft}
+              onSwipeableOpen={() => handleDeleteProduct(item.id)}
+              overshootLeft={false}
+            >
+              <View style={styles.prodRow}>
+                <Text style={styles.prodName}>{item.name}</Text>
+                <Text style={styles.macroText}>
+                  <Text style={[styles.macroVal, styles.proteinClr]}>
+                    {item.protein.toFixed(1)}g{' '}
+                  </Text>
+                  protein
+                </Text>
+                <Text style={styles.macroText}>
+                  <Text style={[styles.macroVal, styles.fatClr]}>
+                    {item.fat.toFixed(1)}g{' '}
+                  </Text>
+                  fat
+                </Text>
+                <Text style={styles.macroText}>
+                  <Text style={[styles.macroVal, styles.carbsClr]}>
+                    {item.carbs.toFixed(1)}g{' '}
+                  </Text>
+                  carbs
+                </Text>
+                <Text style={styles.kcal}>
+                  {(item.protein * 4 + item.carbs * 4 + item.fat * 9).toFixed(0)} kcal
+                </Text>
+              </View>
+            </Swipeable>
+          );
+        };
 
         return (
           <>
@@ -216,7 +241,7 @@ export default function App() {
         onSwipeableOpen={handleDelete}
         overshootLeft={false}
       >
-        <Pressable style={styles.card} onPress={() => promptMul(item.id, item.multiplier)}>
+        <Pressable style={styles.card} onPress={() => openMul(item.id, item.multiplier)}>
           {/* górna linia: multiplier + nazwa + kcal */}
           <View style={styles.rowTop}>
             <View style={styles.rowLeft}>
@@ -311,15 +336,22 @@ export default function App() {
 
           {/* list */}
           <FlatList
+            ref={listRef}
             data={meals}
             keyExtractor={(i) => i.id.toString()}
             renderItem={Row}
+            onContentSizeChange={() => {
+              if (needScroll) {
+                listRef.current?.scrollToEnd({ animated: true });
+                setNeedScroll(false);
+              }
+            }}
             contentContainerStyle={meals.length === 0 && { flex: 1, justifyContent: 'center' }}
-            ListEmptyComponent={<Text style={styles.empty}>Brak pozycji</Text>}
+            ListEmptyComponent={<Text style={styles.empty}>+ Add Meals</Text>}
           />
 
           {/* floating + */}
-          <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+          <TouchableOpacity style={styles.addBtn} onPress={openPicker}>
             <Ionicons name="add" size={30} color="#fff" />
           </TouchableOpacity>
 
@@ -374,6 +406,85 @@ export default function App() {
 
         )}
 
+        {/* ---------- PRODUCT PICKER MODAL ---------- */}
+        <Modal visible={showPicker} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalBox, { maxHeight: '70%' }]}>
+              <Text style={styles.modalTitle}>Choose product</Text>
+
+              <FlatList
+                data={allProducts}
+                keyExtractor={(i) => i.id.toString()}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.prodRow}
+                    onPress={async () => {
+                      await db.addMeal(
+                        item.name,
+                        item.protein,
+                        item.fat,
+                        item.carbs,
+                        iso(date)
+                      );
+                      setNeedScroll(true);
+                      closePicker();
+                      refresh();
+                    }}
+                  >
+                    <Text style={styles.prodName}>{item.name}</Text>
+                    <Text style={styles.proteinClr}>{item.protein.toFixed(1)} P</Text><Text style={styles.spacerVertical}> | </Text>
+                    <Text style={styles.fatClr}>{item.fat.toFixed(1)} F</Text><Text style={styles.spacerVertical}> | </Text>
+                    <Text style={styles.carbsClr}>{item.carbs.toFixed(1)} C</Text>
+                  </Pressable>
+                )}
+                ListEmptyComponent={
+                  <Text style={{ textAlign:'center', marginTop:20 }}>No products</Text>
+                }
+              />
+
+              {/* przycisk Zamknij */}
+              <TouchableOpacity style={[styles.btnCancel,{alignSelf:'flex-end'}]} onPress={closePicker}>
+                <Text style={styles.btnTxt}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ---------- MULTIPLIER MODAL ---------- */}
+        <Modal visible={showMul} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>Multiplier (0 – 10)</Text>
+
+              <TextInput
+                style={styles.input}
+                keyboardType="decimal-pad"
+                value={mulVal}
+                onChangeText={setMulVal}
+                autoFocus
+              />
+
+              <View style={styles.modalBtns}>
+                <TouchableOpacity style={styles.btnCancel} onPress={closeMul}>
+                  <Text style={styles.btnTxt}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.btnSave}
+                  onPress={async () => {
+                    const m = parseFloat(mulVal);
+                    if (isNaN(m) || m < 0 || m > 10 || selectedId === null) return;
+                    await db.updateMultiplier(selectedId, m);
+                    closeMul();
+                    refresh();                    /* odświeża wiersz + totals */
+                  }}
+                >
+                  <Text style={[styles.btnTxt, { color:'#fff' }]}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         </SafeAreaView>
       </SafeAreaProvider>
@@ -407,7 +518,7 @@ const styles = StyleSheet.create({
   },
 
   /* górna i dolna część wiersza */
-  rowTop:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' , paddingTop: '2', paddingBottom: '1'},
+  rowTop:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   rowLeft:   { flexDirection: 'row', alignItems: 'center' },
   rowBottom: { flexDirection: 'row', marginTop: 4 },
 
@@ -423,6 +534,8 @@ const styles = StyleSheet.create({
   grip: { position: 'absolute', right: 12, top: 28 },
 
   empty: { textAlign: 'center', color: '#888' },
+
+  btnTxt: {fontSize: 15, color: '#0f172a', fontWeight: '500' },
 
   addBtn: {
     position: 'absolute',
@@ -588,4 +701,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563eb',
     borderRadius: 8,
   },
+
+  spacerVertical: {fontSize: 15, color: '#ddd'},
+
 });

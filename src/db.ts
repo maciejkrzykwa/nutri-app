@@ -35,7 +35,7 @@ export async function getMealsByDate(dateIso: string) {
   const db = await dbPromise;
   return db.getAllAsync<{
     id: number; name: string; protein: number; fat: number; carbs: number; multiplier: number;
-  }>('SELECT * FROM meals WHERE date = ? ORDER BY id DESC', [dateIso]);
+  }>('SELECT * FROM meals WHERE date = ? ORDER BY id ASC', [dateIso]);
 }
 
 export async function updateMultiplier(id: number, mul: number) {
@@ -97,4 +97,9 @@ export async function addProduct(
     'INSERT INTO products (name, protein, fat, carbs) VALUES (?,?,?,?)',
     name, protein, fat, carbs
   );
+}
+
+export async function deleteProduct(id: number) {
+  const db = await dbPromise;
+  await db.runAsync('DELETE FROM products WHERE id = ?', id);
 }
