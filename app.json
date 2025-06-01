@@ -20,10 +20,17 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.maciej.krzykwa.nutriapp"
     },
     "plugins": [
       "expo-sqlite"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "71c82275-8a95-43b2-bf7d-5e6f18d14783"
+      }
+    },
+    "owner": "maciej.krzykwa"
   }
 }
