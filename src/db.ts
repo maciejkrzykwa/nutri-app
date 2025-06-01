@@ -14,6 +14,7 @@ export async function init() {
     date       TEXT   NOT NULL
   );`);
   await initProducts();
+  await initGoal();
 }
 
 export async function addMeal(
@@ -133,4 +134,52 @@ export async function addProduct(
 export async function deleteProduct(id: number) {
   const db = await dbPromise;
   await db.runAsync('DELETE FROM products WHERE id = ?', id);
+}
+
+/* 1.1  ── CREATE TABLE ───────────────────────────────────────────── */
+export async function initGoal() {
+  const db = await dbPromise;
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS goal (
+      id      INTEGER PRIMARY KEY CHECK (id = 1),
+      weight  REAL,
+      p_kg    REAL,
+      f_kg    REAL,
+      c_kg    REAL
+    );
+  `);
+
+  /* seed demo danych – tylko gdy pusta tabela */
+  const count = await db.getFirstAsync<{ c: number }>('SELECT COUNT(*) AS c FROM goal;');
+  if (count?.c === 0) {
+    await db.runAsync(
+      `INSERT INTO goal (id, weight, p_kg, f_kg, c_kg) VALUES
+        (1, 60, 1.6, 1.4, 5.8)
+        ;`
+    );
+  }
+}
+
+/* 1.2  ── odczyt i zapis ─────────────────────────────────────────── */
+export async function getGoal() {
+  const db = await dbPromise;
+  return db.getFirstAsync<{ weight:number; p_kg:number; f_kg:number; c_kg:number }>(
+    'SELECT * FROM goal WHERE id = 1'
+  );
+}
+
+export async function upsertGoal(
+  weight:number, p:number, f:number, c:number
+) {
+  const db = await dbPromise;
+  await db.runAsync(
+    `INSERT INTO goal (id, weight, p_kg, f_kg, c_kg)
+       VALUES (1,?,?,?,?)
+       ON CONFLICT(id) DO UPDATE SET
+         weight = excluded.weight,
+         p_kg   = excluded.p_kg,
+         f_kg   = excluded.f_kg,
+         c_kg   = excluded.c_kg;`,
+    weight, p, f, c
+  );
 }

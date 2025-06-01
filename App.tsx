@@ -16,7 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as db from './src/db';
 /* imports – dodajemy Icons */
-import { Ionicons, Octicons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 
 /* enum tabów, na górze pliku */
 type Tab = 'daily' | 'products';
@@ -66,8 +66,15 @@ export default function App() {
   };
   const closeMul = () => setShowMul(false);
 
+  /* ---------- DAILY GOAL ---------- */
+  const [goal, setGoal] = useState<{weight:number; p:number; f:number; c:number} | null>(null);
+  const [showGoal, setShowGoal] = useState(false); 
+
   useEffect(() => {
     db.init().then(refresh).catch(console.warn);
+    db.getGoal().then(g => {
+      if (g) setGoal({ weight: g.weight, p: g.p_kg, f: g.f_kg, c: g.c_kg });
+    });
   }, []);
 
   
@@ -300,6 +307,15 @@ const MealRow = ({ item }: { item: typeof meals[0] }) => {
     }
   };
 
+  /* ile zjedzono na 1 kg wagi docelowej */
+  const perKg = goal
+    ? {
+        p: tot.protein / goal.weight,
+        f: tot.fat     / goal.weight,
+        c: tot.carbs   / goal.weight,
+      }
+    : { p: tot.protein, f: tot.fat, c: tot.carbs }; // fallback, gdy brak celu
+
   /* render ----------------------------------------------------------------- */
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -376,27 +392,30 @@ const MealRow = ({ item }: { item: typeof meals[0] }) => {
           </TouchableOpacity>
 
           {/* --- DAILY TOTALS BAR ------------------------------------ */}
-          <View style={styles.totalsBar}>
-            <Text style={styles.totalsTitle}>Daily Totals</Text>
+          <TouchableOpacity style={styles.totalsBar} onPress={() => setShowGoal(true)}>
+            
+            <Text style={styles.totalsTitle}>
+              Daily Totals
+            </Text>
 
             <View style={styles.totalsRow}>
               <View style={styles.totalsBox}>
                 <Text style={[styles.totalsVal, styles.proteinClr]}>
-                  {tot.protein.toFixed(1)}g
+                  {perKg.p.toFixed(2)} <Text style={styles.gperkg}>g/kg</Text>
                 </Text>
                 <Text style={styles.totalsLbl}>Protein</Text>
               </View>
 
               <View style={styles.totalsBox}>
                 <Text style={[styles.totalsVal, styles.fatClr]}>
-                  {tot.fat.toFixed(1)}g
+                  {perKg.f.toFixed(2)} <Text style={styles.gperkg}>g/kg</Text>
                 </Text>
                 <Text style={styles.totalsLbl}>Fat</Text>
               </View>
 
               <View style={styles.totalsBox}>
                 <Text style={[styles.totalsVal, styles.carbsClr]}>
-                  {tot.carbs.toFixed(1)}g
+                  {perKg.c.toFixed(2)} <Text style={styles.gperkg}>g/kg</Text>
                 </Text>
                 <Text style={styles.totalsLbl}>Carbs</Text>
               </View>
@@ -408,7 +427,23 @@ const MealRow = ({ item }: { item: typeof meals[0] }) => {
                 <Text style={styles.totalsLbl}>kcal</Text>
               </View>
             </View>
-          </View>
+
+            {goal && (
+                <View style={styles.goalTotalsView}>
+                  <Text style={styles.goalTotals}>
+                    <Text style={styles.totalsTitle}>Goal          </Text>
+                    <Text style={styles.goalTotals}>{goal.weight} kg</Text>
+                    <Text style={[styles.proteinClr]}>         {Number(goal.p).toFixed(1)}</Text>
+                    <Text style={styles.spacerVertical}> | </Text>
+                    <Text style={[styles.fatClr]}>{Number(goal.f).toFixed(1)}</Text>
+                    <Text style={styles.spacerVertical}> | </Text>
+                    <Text style={[styles.carbsClr]}>{Number(goal.c).toFixed(1)}           </Text>
+                    <Text >{Math.round(goal.weight * (goal.p*4 + goal.f*9 + goal.c*4))} kcal</Text>
+                  </Text>
+                </View>
+              )}
+              
+          </TouchableOpacity>
 
           {/* calendar native modal */}
           {showCal && (
@@ -506,6 +541,73 @@ const MealRow = ({ item }: { item: typeof meals[0] }) => {
           </View>
         </Modal>
 
+        {/* ---------- GOAL MODAL ---------- */} 
+        <Modal visible={showGoal} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>Set your goal</Text>
+
+              <View style={{ position: 'relative' }}>
+                <TextInput style={styles.input}
+                  placeholder="Target weight (kg)"
+                  keyboardType="decimal-pad"
+                  value={goal?.weight.toString() ?? ''}
+                  onChangeText={v => setGoal(g => g ? {...g, weight: v.replace(',','.')} : null)}
+                />
+                <Text style={styles.ghostHint}>target&nbsp;weight&nbsp;(kg)</Text>
+              </View>
+              <View style={{ position: 'relative' }}>
+                <TextInput style={styles.input}
+                  placeholder="Protein g per kg"
+                  keyboardType="decimal-pad"
+                  value={goal?.p.toString() ?? ''}
+                  onChangeText={v => setGoal(g => g ? {...g, p: v.replace(',','.')} : null)}
+                />
+                <Text style={styles.ghostHint}>protein g&nbsp;per&nbsp;kg</Text>
+              </View>
+              <View style={{ position: 'relative' }}>
+                <TextInput style={styles.input}
+                  placeholder="Fat g per kg"
+                  keyboardType="decimal-pad"
+                  value={goal?.f.toString() ?? ''}
+                  onChangeText={v => setGoal(g => g ? {...g, f: v.replace(',','.')} : null)}
+                />
+                <Text style={styles.ghostHint}>fat g&nbsp;per&nbsp;kg</Text>
+              </View>
+              <View style={{ position: 'relative' }}>
+                <TextInput style={styles.input}
+                  placeholder="Carbs g per kg"
+                  keyboardType="decimal-pad"
+                  value={goal?.c.toString() ?? ''}
+                  onChangeText={v => setGoal(g => g ? {...g, c: v.replace(',','.')} : null)}
+                />
+                <Text style={styles.ghostHint}>carbs g&nbsp;per&nbsp;kg</Text>
+              </View>
+
+              <View style={styles.modalBtns}>
+                <TouchableOpacity style={styles.btnCancel} onPress={() => setShowGoal(false)}>
+                  <Text style={styles.btnTxt}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.btnSave}
+                  onPress={async () => {
+                    if (!goal) return;
+                    const w = parseFloat(goal.weight.toString().replace(',','.')),
+                          p = parseFloat(goal.p.toString().replace(',','.')),
+                          f = parseFloat(goal.f.toString().replace(',','.')),
+                          c = parseFloat(goal.c.toString().replace(',','.'));
+                    if (isNaN(w)||isNaN(p)||isNaN(f)||isNaN(c)) return;
+                    await db.upsertGoal(w,p,f,c);
+                    setShowGoal(false);
+                  }}
+                >
+                  <Text style={[styles.btnTxt,{color:'#fff'}]}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
         </SafeAreaView>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -560,7 +662,7 @@ const styles = StyleSheet.create({
   addBtn: {
     position: 'absolute',
     right: 16,
-    bottom: 142,
+    bottom: 172,
     backgroundColor: '#1e90ff',
     width: 72,
     height: 72,
@@ -612,6 +714,11 @@ const styles = StyleSheet.create({
   proteinClr: { color: '#0ea5e9' },  /* secondary */
   fatClr:     { color: '#f59e0b' },  /* accent    */
   carbsClr:   { color: '#10b981' },  /* primary   */
+
+  goalTotals: {fontSize: 11, color: '#64748b', marginTop: 0},
+  goalTotalsView: {alignContent: 'center', textAlign: 'center', margin: 'auto', paddingTop: 13, marginBottom: 0},
+
+  gperkg: {fontSize:9},
 
   deleteBox: {
     justifyContent: 'center',
@@ -723,5 +830,13 @@ const styles = StyleSheet.create({
   },
 
   spacerVertical: {fontSize: 15, color: '#ddd'},
+
+  ghostHint: {
+    position: 'absolute',
+    right: 10,
+    top: 10,          // dopasuj do paddingVertical w .input
+    fontSize: 12,
+    color: '#94a3b8', // szary
+  },
 
 });
