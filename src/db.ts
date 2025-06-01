@@ -75,8 +75,39 @@ export async function initProducts() {
   if (count?.c === 0) {
     await db.runAsync(
       `INSERT INTO products (name, protein, fat, carbs) VALUES
-        ('100g Rice',     3, 0.1, 27),
-        ('100g Chicken', 31, 4,   0 );`
+        ('Pierś z kurczaka',21.5,1.3,0.0),
+        ('Udo z kurczaka',16.8,10.2,0.0),
+        ('Karkówka',16.1,22.8,0.0),
+        ('Schab',21.0,7.0,0.0),
+        ('Boczek',11.1,47.0,0.0),
+        ('Łosoś',19.9,13.6,0.0),
+        ('Wątróbka',19.4,5.2,2.0),
+        ('Szynka wieprz.',18.0,16.0,0.0),
+        ('Tuńczyk',22.0,1.0,0.0),
+        ('Mleko 2%',3.0,2.0,4.3),
+        ('Jajko (60g)',7.8,6.6,0.6),
+        ('Miód',0.3,0.0,80.0),
+        ('Ser twar. Poltlusty',18.7,4.7,3.7),
+        ('Ryż brązowy',8.6,1.9,74.0),
+        ('Ryż biały',7.9,0.9,79.0),
+        ('Orzechy laskowe',15.0,62.0,17.0),
+        ('Avocado',2.0,15.3,7.1),
+        ('Banan',1.0,0.3,21.8),
+        ('Jabłko',0.4,0.4,10.1),
+        ('Mutant mass',20.0,6.2,67.5),
+        ('Oliwa',0.0,91.6,0.0),
+        ('Brokuł',2.8,0.4,6.6),
+        ('Jogurt naturalny',4.9,3.0,4.2),
+        ('Serek wiejski',12.0,6.0,2.5),
+        ('Mak. jajeczny',12.1,1.9,72.2),
+        ('Chleb zwykly(mieszany)',5.4,1.1,52.2),
+        ('Ziemniaki',1.9,0.1,16.8),
+        ('Burak',1.8,0.1,7.3),
+        ('Marchew',1.0,0.2,9.1),
+        ('Pomidor',0.9,0.2,2.4),
+        ('Szpinak',2.8,0.4,3.4),
+        ('Por',1.6,0.3,8.0)
+        ;`
     );
   }
 }
