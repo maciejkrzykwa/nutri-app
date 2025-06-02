@@ -189,33 +189,45 @@ export default function App() {
                 <View style={styles.modalBox}>
                   <Text style={styles.modalTitle}>New product</Text>
 
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Name"
-                    value={name}
-                    onChangeText={setNameProductsView}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Protein"
-                    keyboardType="decimal-pad"
-                    value={protein}
-                    onChangeText={setProteinProductsView}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Fat"
-                    keyboardType="decimal-pad"
-                    value={fat}
-                    onChangeText={setFatProductsView}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Carbs"
-                    keyboardType="decimal-pad"
-                    value={carbs}
-                    onChangeText={setCarbsProductsView}
-                  />
+                  <View style={{ position: 'relative' }}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Name"
+                      value={name}
+                      onChangeText={setNameProductsView}
+                    />
+                    <Text style={styles.ghostHint}>name</Text>
+                  </View>
+                  <View style={{ position: 'relative' }}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Protein"
+                      keyboardType="decimal-pad"
+                      value={protein}
+                      onChangeText={setProteinProductsView}
+                    />
+                    <Text style={styles.ghostHint}>protein</Text>
+                  </View>
+                  <View style={{ position: 'relative' }}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Fat"
+                      keyboardType="decimal-pad"
+                      value={fat}
+                      onChangeText={setFatProductsView}
+                    />
+                    <Text style={styles.ghostHint}>fat</Text>
+                  </View>
+                  <View style={{ position: 'relative' }}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Carbs"
+                      keyboardType="decimal-pad"
+                      value={carbs}
+                      onChangeText={setCarbsProductsView}
+                    />
+                    <Text style={styles.ghostHint}>carbs</Text>
+                  </View>
 
                   <View style={styles.modalBtns}>
                     <TouchableOpacity style={styles.btnCancel} onPress={closeProductsView}>
