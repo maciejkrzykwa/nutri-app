@@ -183,3 +183,10 @@ export async function upsertGoal(
     weight, p, f, c
   );
 }
+
+export async function getMealsRaw(dateIso: string) {
+  const db = await dbPromise;
+  return db.getAllAsync<{
+    name: string; protein: number; fat: number; carbs: number; multiplier: number;
+  }>('SELECT name, protein, fat, carbs, multiplier FROM meals WHERE date = ?', [dateIso]);
+}

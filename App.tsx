@@ -70,6 +70,16 @@ export default function App() {
   const [goal, setGoal] = useState<{weight:number; p:number; f:number; c:number} | null>(null);
   const [showGoal, setShowGoal] = useState(false); 
 
+  /* ---------- COPY-DAY PICKER ---------- */
+  const [showCopy, setShowCopy]   = useState(false);
+  const copyMealsFrom = async (srcIso: string) => {
+  const srcMeals = await db.getMealsRaw(srcIso);
+  for (const m of srcMeals) {
+    await db.addMeal(m.name, m.protein, m.fat, m.carbs, iso(date), m.multiplier);
+  }
+  refresh();
+};
+
   useEffect(() => {
     db.init().then(refresh).catch(console.warn);
     db.getGoal().then(g => {
@@ -395,7 +405,11 @@ const MealRow = ({ item }: { item: typeof meals[0] }) => {
               }
             }}
             contentContainerStyle={meals.length === 0 && { flex: 1, justifyContent: 'center' }}
-            ListEmptyComponent={<Text style={styles.empty}>+ Add Meals</Text>}
+            ListEmptyComponent={
+              <Pressable style={{flex:1, justifyContent:'center'}} onPress={() => setShowCopy(true)}>
+                <Text style={styles.empty}>+Tap to copy one of the previous days</Text>
+              </Pressable>
+            }
           />
 
           {/* floating + */}
@@ -619,6 +633,24 @@ const MealRow = ({ item }: { item: typeof meals[0] }) => {
             </View>
           </View>
         </Modal>
+
+        {/* ---------- COPY-DAY DATE PICKER ---------- */}
+        {showCopy && (
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display="calendar"
+            onChange={async (_evt, picked) => {
+              setShowCopy(false);
+              if (picked) {
+                const srcIso = iso(picked);
+                if (srcIso !== iso(date)) {
+                  await copyMealsFrom(srcIso);
+                }
+              }
+            }}
+          />
+        )}
 
         </SafeAreaView>
       </SafeAreaProvider>
