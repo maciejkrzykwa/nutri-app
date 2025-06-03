@@ -22,7 +22,10 @@ import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 type Tab = 'daily' | 'products';
 
 /* utils */
-const iso = (d: Date) => d.toISOString().split('T')[0];
+const iso = (d: Date) => {
+  const pad = (n: number) => (n < 10 ? '0' + n : n.toString());
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 
 /* ------------------------------------------------------------------- */
