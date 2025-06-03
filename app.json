@@ -21,7 +21,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.maciej.krzykwa.nutriapp"
+      "package": "com.maciej.krzykwa.nutriapp",
+      "name": "Nutrify"
     },
     "plugins": [
       "expo-sqlite"
